@@ -1,11 +1,11 @@
 design
 
-[x]SPI slave skeleton
-[x]write data path mosi to rx_data and rx_valid \n
-[]read_add data path mosi to rx_data
-[]read_data data path tx_data to miso
-[]single port async RAM skeleton
-[]
+[x]SPI slave skeleton  
+[x]write data path mosi to rx_data and rx_valid  
+[]read_add data path mosi to rx_data  
+[]read_data data path tx_data to miso  
+[]single port async RAM skeleton  
+[]spi wrapper connecting
 
 verification:
 verification using testing principles:
