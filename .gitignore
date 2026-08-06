@@ -1,0 +1,36 @@
+# ModelSim / Questa
+work/
+transcript
+vsim.wlf
+modelsim.ini
+
+# Waveform databases
+*.wlf
+*.vcd
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+*.tmp
+
+# Quartus (if applicable)
+db/
+incremental_db/
+output_files/
+
+# Vivado (if applicable)
+.cache/
+.hw/
+.ip_user_files/
+.runs/
+.sim/
+.Xil/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
