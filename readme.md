@@ -5,8 +5,8 @@ design
 [x]read_add data path mosi to rx_data  
 [x]read_data data path tx_data to miso  
 [x]single port async RAM skeleton  
-[] RAM logic
-[]spi wrapper connecting
+[x] RAM logic  
+[x] spi wrapper connecting  
 
 verification:  
 verification using testing principles:
