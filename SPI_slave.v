@@ -8,6 +8,7 @@ module SPI_slave #(
     input SS_n,
     input [TX_SIZE-1:0] tx_data,
     input tx_valid,
+    input read_addr_received,
     output MISO,
     output reg [RX_SIZE-1:0] rx_data,
     output reg rx_valid
@@ -35,8 +36,8 @@ module SPI_slave #(
     reg [2:0] ns;
     reg [SP_CNT_WIDTH-1:0] sp_counter;
     reg [PS_CNT_WIDTH-1:0] ps_counter;
-    reg read_addr_received;
-    reg load;
+    wire load;
+    reg piso_loaded;
     wire piso_en;
     wire sipo_en;
     wire [RX_SIZE-1:0] sipo_output;
@@ -45,7 +46,6 @@ module SPI_slave #(
     always @(posedge clk) begin
         if(~rst) begin
             cs<=IDLE;
-            read_addr_received<=0;
         end
         else cs<=ns;
     end
@@ -87,7 +87,7 @@ module SPI_slave #(
     end
     
     assign sipo_en = ~SS_n && (cs !== IDLE);
-    assign piso_en = ~SS_n && (cs == READ_DATA) && (ps_counter < TX_SIZE);
+    assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_SIZE);
 
     SIPO #(.DATA_WIDTH(RX_SIZE)) sipo(
         .clk(clk),
@@ -112,6 +112,19 @@ module SPI_slave #(
         else if (sipo_en) sp_counter <= sp_counter + 1'b1;
     end
 
+    always @(posedge clk) begin
+        if(~rst || cs == IDLE) ps_counter <= 0;
+        else if (piso_en) ps_counter <= ps_counter + 1'b1;
+    end
+
+    assign load = tx_valid && (cs == READ_DATA);
+
+    always @(posedge clk) begin
+        if(~rst || cs != READ_DATA)
+            piso_loaded <= 1'b0;
+        else if(load)
+            piso_loaded <= 1'b1;
+    end
     //output logic block
     //internal signals: 
     //sp counter increments change with every clock cycle after chk_cmd
@@ -137,6 +150,23 @@ module SPI_slave #(
                     end
                     //write addr vs write data logic is in RAM module side depending on the first two bits
                 end
+
+                READ_ADD: begin
+                    if(sp_counter == RX_SIZE-1) begin
+                        rx_data <= {sipo_output[RX_SIZE-2:0], MOSI};
+                        rx_valid <= 1'b1;
+                    end
+                end
+
+                READ_DATA: begin
+                    if(sp_counter == RX_SIZE-1) begin
+                        rx_data <= {sipo_output[RX_SIZE-2:0], MOSI};
+                        rx_valid <= 1'b1;
+                    end
+
+                    // MISO is connected to SO, shift en condition is assigned above, load condition in always block
+                end
+
                 default:; 
             endcase
         end
@@ -164,6 +194,7 @@ module SIPO #(
 endmodule
 
 //shift-left PISO register
+// shift-left PISO register
 module PISO #(
     parameter DATA_WIDTH = 8
 ) (
@@ -174,13 +205,22 @@ module PISO #(
     input shift_en,
     output reg SO
 );
-    reg [DATA_WIDTH-1:0] register;
-    always @(posedge clk) begin
-        if(~rst) register <= {DATA_WIDTH{1'b0}};
-        else if(load) register <= PI;
-        else if(shift_en) begin
-            SO <= register[DATA_WIDTH-1];
-            register <= {register[DATA_WIDTH-2:0], 1'b0};
-        end
+
+reg [DATA_WIDTH-1:0] register;
+
+always @(posedge clk) begin
+    if(~rst) begin
+        register <= {DATA_WIDTH{1'b0}};
+        SO <= 1'b0;
     end
+    else if(load) begin
+        register <= PI;
+        SO <= 1'b0;
+    end
+    else if(shift_en) begin
+        SO <= register[DATA_WIDTH-1];
+        register <= {register[DATA_WIDTH-2:0], 1'b0};
+    end
+end
+
 endmodule
