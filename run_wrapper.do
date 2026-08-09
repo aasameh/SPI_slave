@@ -17,7 +17,7 @@ add wave -hex /SPI_Wrapper_tb/uut/tx_data
 add wave -hex /SPI_Wrapper_tb/uut/tx_valid
 
 add wave -divider {RAM Memory Location}
-add wave -hex {/SPI_Wrapper_tb/uut/RAM_inst/mem[5]}
+add wave -hex {/SPI_Wrapper_tb/uut/RAM/mem[5]}
 
 add wave -divider {Testbench Register}
 add wave -hex /SPI_Wrapper_tb/rx_data_out

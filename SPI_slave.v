@@ -9,7 +9,7 @@ module SPI_slave #(
     input [TX_SIZE-1:0] tx_data,
     input tx_valid,
     input read_addr_received,
-    output reg MISO,
+    output MISO,
     output reg [RX_SIZE-1:0] rx_data,
     output reg rx_valid
 );
@@ -42,6 +42,7 @@ module SPI_slave #(
     wire piso_en;
     wire sipo_en;
     wire [RX_SIZE-1:0] sipo_output;
+
 
     //state memory block
     always @(posedge clk) begin
@@ -78,7 +79,7 @@ module SPI_slave #(
         endcase
     end
     
-assign sipo_en = ~SS_n && (cs != IDLE);
+assign sipo_en = ~SS_n && (cs == WRITE || cs == READ_ADD || cs == READ_DATA);
 assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_SIZE - 1);
 
     // SUBMODULE INSTANTIATIONS
@@ -95,12 +96,12 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
     //     .rst(rst),
     //     .SI(MOSI),
     //     .shift_en(sipo_en),
-    //     .PO(SIPO_register)
+    //     .PO(sipo_output)
     // );
 
     // Counters
     always @(posedge clk) begin
-        if(~rst || cs == IDLE) sp_counter <= 0;
+        if(~rst || cs == IDLE) sp_counter <= 1;
         else if (sipo_en) sp_counter <= sp_counter + 1'b1;
     end
 
@@ -129,14 +130,14 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
     always @(posedge clk) begin
         if(~rst) begin
             PISO_register <= {TX_SIZE{1'b0}};
-            MISO <= 1'b0;
+            SO <= 1'b0;
         end
         else if(load) begin
-            MISO <= tx_data[TX_SIZE-1];
-            PISO_register <= {tx_data[TX_SIZE-2:0], 1'b0};
+            SO <= PI[TX_SIZE-1];
+            PISO_register <= {PI[TX_SIZE-2:0], 1'b0};
         end
-        else if(piso_en) begin
-            MISO <= PISO_register[TX_SIZE-1];
+        else if(shift_en) begin
+            SO <= PISO_register[TX_SIZE-1];
             PISO_register <= {PISO_register[TX_SIZE-2:0], 1'b0};
         end
     end
@@ -158,7 +159,7 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
             //rx_data is also one cycle old so we reconstruct the next value
                 WRITE: begin
                     if(sp_counter == RX_SIZE-1) begin
-                        rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
+                        rx_data <= {sipo_output[RX_SIZE-2:0], MOSI};
                         rx_valid <= 1'b1;
                     end
                     //write addr vs write data logic is in RAM module side depending on the first two bits
@@ -166,14 +167,14 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
 
                 READ_ADD: begin
                     if(sp_counter == RX_SIZE-1) begin
-                        rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
+                        rx_data <= {sipo_output[RX_SIZE-2:0], MOSI};
                         rx_valid <= 1'b1;
                     end
                 end
 
                 READ_DATA: begin
                     if(sp_counter == RX_SIZE-1) begin
-                        rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
+                        rx_data <= {sipo_output[RX_SIZE-2:0], MOSI};
                         rx_valid <= 1'b1;
                     end
 

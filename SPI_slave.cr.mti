@@ -8,13 +8,6 @@ Top level modules:
 } {} {}} C:/college/digital_design_diploma/SPI_slave/testbench.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/testbench.v
 QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
 
-} {} {}} C:/college/digital_design_diploma/SPI_slave/RAM.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/RAM.v
-QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
--- Compiling module RAM
-
-Top level modules:
-	RAM
-
 } {} {}} C:/college/digital_design_diploma/SPI_slave/Wrapper.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/Wrapper.v
 QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
 -- Compiling module SPI_Wrapper
