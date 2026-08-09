@@ -1,48 +1,136 @@
-module SPI_Wrapper (
-    input clk,
-    input rst,
-    input MOSI,
-    input SS_n,
-    output MISO
-);
+`timescale 1ns / 1ps
 
-wire [9:0] rx_data;
-wire rx_valid;
+module SPI_Wrapper_tb();
 
-wire [7:0] tx_data;
-wire tx_valid;
+    reg clk;
+    reg rst;
+    reg MOSI;
+    reg SS_n;
+    wire MISO;
 
-wire read_addr_received;
+    integer i;
+    reg [9:0] payload;
+    reg [7:0] rx_data_out;
 
+    // Instantiation of SPI_Wrapper
+    SPI_Wrapper uut (
+        .clk(clk),
+        .rst(rst),
+        .MOSI(MOSI),
+        .SS_n(SS_n),
+        .MISO(MISO)
+    );
 
-SPI_slave #(
-    .RX_SIZE(10),
-    .TX_SIZE(8)
-) SPI (
-    .clk(clk),
-    .rst(rst),
-    .MOSI(MOSI),
-    .MISO(MISO),
-    .SS_n(SS_n),
-    .rx_data(rx_data),
-    .tx_data(tx_data),
-    .rx_valid(rx_valid),
-    .tx_valid(tx_valid),
-    .read_addr_received(read_addr_received)
-);
+    // Clock Generation (Period = 10ns)
+    always #5 clk = ~clk;
 
+    initial begin
+        // 0. System Reset & Initialization
+        clk = 0;
+        rst = 0;
+        MOSI = 0;
+        SS_n = 1;
+        rx_data_out = 8'b0;
 
-RAM #(
-    .MEM_DEPTH(256),
-    .ADDR_SIZE(8)
-) RAM (
-    .clk(clk),
-    .rst(rst),
-    .din(rx_data),
-    .rx_valid(rx_valid),
-    .dout(tx_data),
-    .tx_valid(tx_valid),
-    .read_addr_received(read_addr_received)
-);
+        #20;
+        rst = 1;
+        #10;
+
+        // 1. Write Address (Address: 0x05)
+        $display("--- 1. Writing Address (0x05) ---");
+        payload = 10'b00_0000_0101; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 0; // Control bit: Write
+
+        @(negedge clk);
+
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        SS_n = 1;
+        MOSI = 0;
+        #30;
+
+        // 2. Write Data (Data: 0xA5 at Address 0x05)
+        $display("--- 2. Writing Data (0xA5) ---");
+        payload = 10'b01_1010_0101; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 0; // Control bit: Write
+
+        @(negedge clk);
+
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        SS_n = 1;
+        MOSI = 0;
+        #30;
+
+        // 3. Read Address (Address: 0x05)
+        $display("--- 3. Setting Read Address (0x05) ---");
+        payload = 10'b10_0000_0101; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 1; // Control bit: Read
+
+        @(negedge clk);
+
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        SS_n = 1;
+        MOSI = 0;
+        #30;
+
+        // 4. Read Data Command & Sampling MISO
+        $display("--- 4. Requesting Read Data & Checking MISO ---");
+        payload = 10'b11_0000_0000; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 1; // Control bit: Read
+
+        @(negedge clk);
+
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        // Wait for RAM to fetch data and SPI PISO register to load
+        @(negedge clk);
+
+        // Read 8 bits shifted out on MISO line
+        $display("Reading MISO output stream:");
+        for (i = 7; i >= 0; i = i - 1) begin
+            rx_data_out[i] = MISO;
+            $display("MISO Bit[%0d] = %b", i, MISO);
+            @(negedge clk);
+        end
+
+        // Verification
+        if (rx_data_out === 8'hA5) begin
+            $display("[WRAPPER_TB PASS] Success! Data read from RAM matches: 0x%h", rx_data_out);
+        end else begin
+            $display("[WRAPPER_TB FAIL] Output mismatch! Expected: 0xA5, Got: 0x%h", rx_data_out);
+        end
+
+        SS_n = 1;
+        #50;
+
+        $display("Simulation Completed.");
+        $stop;
+    end
 
 endmodule

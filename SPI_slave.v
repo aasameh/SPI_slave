@@ -68,26 +68,18 @@ module SPI_slave #(
                 end
             end
 
-            WRITE: begin
-                if(SS_n) ns = IDLE;
-                else ns = WRITE;
-            end
+            WRITE: ns = (SS_n) ? IDLE : WRITE;
 
-            READ_ADD: begin
-                if(SS_n) ns = IDLE;
-                else ns = READ_ADD;
-            end
+            READ_ADD: ns = (SS_n) ? IDLE : READ_ADD;
 
-            READ_DATA: begin
-                if(SS_n) ns = IDLE;
-                else ns = READ_DATA;
-            end
+            READ_DATA: ns = (SS_n) ? IDLE : READ_DATA;
+
             default: ns = IDLE;
         endcase
     end
     
-    assign sipo_en = ~SS_n && (cs !== IDLE);
-    assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_SIZE);
+assign sipo_en = ~SS_n && (cs == WRITE || cs == READ_ADD || cs == READ_DATA);
+assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_SIZE - 1);
 
     SIPO #(.DATA_WIDTH(RX_SIZE)) sipo(
         .clk(clk),
@@ -113,7 +105,7 @@ module SPI_slave #(
     end
 
     always @(posedge clk) begin
-        if(~rst || cs == IDLE) ps_counter <= 0;
+        if(~rst || cs == IDLE || load) ps_counter <= 0;
         else if (piso_en) ps_counter <= ps_counter + 1'b1;
     end
 
@@ -214,8 +206,8 @@ always @(posedge clk) begin
         SO <= 1'b0;
     end
     else if(load) begin
-        register <= PI;
-        SO <= 1'b0;
+        SO <= PI[DATA_WIDTH-1];
+        register <= {PI[DATA_WIDTH-2:0], 1'b0};
     end
     else if(shift_en) begin
         SO <= register[DATA_WIDTH-1];

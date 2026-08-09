@@ -18,13 +18,14 @@ module RAM #(
     reg [ADDR_SIZE-1:0] rd_addr;
 
     // Start of the Cycle
-    always @(posedge clk or negedge rst) begin
+    always @(posedge clk) begin
         // Reset Check
         if (!rst) begin
             dout <= 8'b0;
             tx_valid <= 1'b0;
             wr_addr <= {ADDR_SIZE{1'b0}};
             rd_addr <= {ADDR_SIZE{1'b0}};
+            read_addr_received <= 1'b0;
         end
 
         // Data Write or Read
@@ -42,6 +43,7 @@ module RAM #(
                     2'b11 : begin
                         dout <= mem[rd_addr];
                         tx_valid <= 1'b1;
+                        read_addr_received <= 1'b0;
                     end
                 endcase
             end
