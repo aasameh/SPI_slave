@@ -1,5 +1,3 @@
-`timescale 1ns / 1ps
-
 module SPI_slave #(
     parameter RX_SIZE = 10,
     parameter TX_SIZE = 8
@@ -45,11 +43,7 @@ module SPI_slave #(
     wire sipo_en;
     wire [RX_SIZE-1:0] sipo_output;
 
-<<<<<<< HEAD
-    // State memory block
-=======
     //state memory block
->>>>>>> 6a7eac68678dc3ce7a134f7dbeb2f428449b45ee
     always @(posedge clk) begin
         if (~rst) begin
             cs <= IDLE;
@@ -84,15 +78,8 @@ module SPI_slave #(
         endcase
     end
     
-<<<<<<< HEAD
-    // (تعديل جوهري): إضافة CHK_CMD لتلقي أول بت من الـ Payload أثناء الانتقال
-    assign sipo_en = ~SS_n && (cs == CHK_CMD || cs == WRITE || cs == READ_ADD || cs == READ_DATA);
-    assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_SIZE - 1);
-    assign load    = tx_valid && (cs == READ_DATA);
-=======
 assign sipo_en = ~SS_n && (cs != IDLE);
 assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_SIZE - 1);
->>>>>>> 6a7eac68678dc3ce7a134f7dbeb2f428449b45ee
 
     // SUBMODULE INSTANTIATIONS
     SIPO #(.DATA_WIDTH(RX_SIZE)) sipo (
@@ -103,16 +90,6 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
         .PO(sipo_output)
     );
 
-<<<<<<< HEAD
-    PISO #(.DATA_WIDTH(TX_SIZE)) piso (
-        .clk(clk),
-        .rst(rst),
-        .load(load),
-        .PI(tx_data),
-        .shift_en(piso_en),
-        .SO(MISO)
-    );
-=======
     // SIPO #(.DATA_WIDTH(RX_SIZE)) sipo(
     //     .clk(clk),
     //     .rst(rst),
@@ -120,15 +97,10 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
     //     .shift_en(sipo_en),
     //     .PO(SIPO_register)
     // );
->>>>>>> 6a7eac68678dc3ce7a134f7dbeb2f428449b45ee
 
     // Counters
     always @(posedge clk) begin
-<<<<<<< HEAD
-        if (~rst || cs == IDLE) sp_counter <= 0;
-=======
         if(~rst || cs == IDLE) sp_counter <= 0;
->>>>>>> 6a7eac68678dc3ce7a134f7dbeb2f428449b45ee
         else if (sipo_en) sp_counter <= sp_counter + 1'b1;
     end
 
@@ -146,11 +118,6 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
 
     // Output logic block
     always @(posedge clk) begin
-<<<<<<< HEAD
-        if (~rst) begin
-            rx_data  <= {RX_SIZE{1'b0}};
-            rx_valid <= 1'b0;
-=======
         if(~rst) SIPO_register <= {RX_SIZE{1'b0}};
         else if (sipo_en) SIPO_register <= {SIPO_register[RX_SIZE-2:0], MOSI};
     end
@@ -179,19 +146,9 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
         if(~rst) begin
             rx_data <= {RX_SIZE{1'b0}};
             rx_valid <= 0;
->>>>>>> 6a7eac68678dc3ce7a134f7dbeb2f428449b45ee
         end else begin
             rx_valid <= 1'b0;
             case (cs)
-<<<<<<< HEAD
-                WRITE, READ_ADD, READ_DATA: begin
-                    if (sp_counter == RX_SIZE - 1) begin
-                        rx_data  <= {sipo_output[RX_SIZE-2:0], MOSI};
-                        rx_valid <= 1'b1;
-                    end
-                end
-                default: ;
-=======
                 IDLE: begin
                     SIPO_register <= 0;
                 end
@@ -224,7 +181,6 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
                 end
 
                 default:; 
->>>>>>> 6a7eac68678dc3ce7a134f7dbeb2f428449b45ee
             endcase
         end
     end
