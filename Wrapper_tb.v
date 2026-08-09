@@ -9,7 +9,7 @@ module SPI_Wrapper_tb();
     wire MISO;
 
     integer i;
-    reg [9:0] payload;
+    reg [10:0] payload;       // FIX: was [9:0], now matches 11-bit frame convention
     reg [7:0] rx_data_out;
 
     // Instantiation of SPI_Wrapper
@@ -24,13 +24,16 @@ module SPI_Wrapper_tb();
     // Clock Generation (Period = 10ns)
     always #5 clk = ~clk;
 
-    // Task to send 10-bit payload frame
+    // Task to send 11-bit frame (1 command bit + 10-bit payload)
     task send_frame;
-        input [9:0] frame_payload;
+        input [10:0] frame_payload;
         integer k;
         begin
             @(negedge clk);
             SS_n = 0;
+            MOSI = frame_payload[10];   // command bit
+            @(negedge clk);             // hold #1 — covers IDLE→CHK_CMD edge
+            @(negedge clk);             // hold #2 — covers CHK_CMD→next-state edge, now sampled correctly
             for (k = 9; k >= 0; k = k - 1) begin
                 MOSI = frame_payload[k];
                 @(negedge clk);
@@ -56,23 +59,26 @@ module SPI_Wrapper_tb();
 
         // 1. Write Address (Address: 0x05)
         $display("--- 1. Writing Address (0x05) ---");
-        send_frame(10'b00_0000_0101);
+        send_frame(11'b000_0000_0101);
 
+        repeat(10) @(posedge clk);
         // 2. Write Data (Data: 0xA5 at Address 0x05)
         $display("--- 2. Writing Data (0xA5) ---");
-        send_frame(10'b01_1010_0101);
+        send_frame(11'b011_1010_0101);
 
+        repeat(10) @(posedge clk);
         // 3. Read Address (Address: 0x05)
         $display("--- 3. Setting Read Address (0x05) ---");
-        send_frame(10'b10_0000_0101);
+        send_frame(11'b100_0000_0101);
 
+        repeat(10) @(posedge clk);
         // 4. Read Data Command & Sampling MISO
         $display("--- 4. Requesting Read Data & Checking MISO ---");
-        payload = 10'b11_0000_0000;
-        
+        payload = 11'b110_0000_0000;
+
         @(negedge clk);
         SS_n = 0;
-        for (i = 9; i >= 0; i = i - 1) begin
+        for (i = 10; i >= 0; i = i - 1) begin   // FIX: was i = 9:0, dropped the MSB
             MOSI = payload[i];
             @(negedge clk);
         end

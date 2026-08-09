@@ -1,9 +1,16 @@
-C:/college/digital_design_diploma/SPI_slave/Wrapper_tb.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/Wrapper_tb.v
+C:/college/digital_design_diploma/SPI_slave/SPI_slave_tb.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/SPI_slave_tb.v
 QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
--- Compiling module SPI_Wrapper_tb
+-- Compiling module SPI_slave_tb
 
 Top level modules:
-	SPI_Wrapper_tb
+	SPI_slave_tb
+
+} {} {}} C:/college/digital_design_diploma/SPI_slave/RAM.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/RAM.v
+QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+-- Compiling module RAM
+
+Top level modules:
+	RAM
 
 } {} {}} C:/college/digital_design_diploma/SPI_slave/testbench.v {1 {vlog -work work -vopt -stats=none C:/college/digital_design_diploma/SPI_slave/testbench.v
 QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021

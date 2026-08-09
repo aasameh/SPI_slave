@@ -126,16 +126,6 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
     //MISO changes with every clock cycle
     //rx_data is the full output of SIPO after sp counter equals
 
-
-        //SIPO
-    always @(posedge clk) begin
-        if(~rst) SIPO_register <= {RX_SIZE{1'b0}};
-        else if (sipo_en) SIPO_register <= {SIPO_register[RX_SIZE-2:0], MOSI};
-    end
-
-    assign PO = SIPO_register;
-
-
        //PISO 
     always @(posedge clk) begin
         if(~rst) begin
@@ -144,86 +134,30 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
         end
         else if(load) begin
             MISO <= tx_data[TX_SIZE-1];
-            PISO_register <= {tx_data[TX_SIZE-2:0], 1'b0};
+            PISO_register <= {tx_data[TX_SIZE-1:0]};
         end
         else if(piso_en) begin
             MISO <= PISO_register[TX_SIZE-1];
-            PISO_register <= {PISO_register[TX_SIZE-2:0], 1'b0};
+            PISO_register <= {PISO_register[TX_SIZE-1:0]};
         end
     end
 
 
     always @(posedge clk) begin
         if(~rst) begin
-            rx_data <= {RX_SIZE{1'b0}};
+            SIPO_register <= 0;
+            rx_data <= 0;
+            rx_valid <= 0;
+        end else if (cs==IDLE) begin
+            SIPO_register <= 0;
             rx_valid <= 0;
         end else begin
-            rx_valid <= 0;
-            case (cs)
-                IDLE: begin
-                    SIPO_register <= 0;
-                end
-            //try valid at sp_counter == RX_SIZE and check in waveform
-            //if fail change to RX_SIZE-1
-            //sp_counter is one cycle late
-            //rx_data is also one cycle old so we reconstruct the next value
-                WRITE: begin
-                    if(sp_counter == RX_SIZE-1) begin
-                        rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
-                        rx_valid <= 1'b1;
-                    end
-                    //write addr vs write data logic is in RAM module side depending on the first two bits
-                end
-
-                READ_ADD: begin
-                    if(sp_counter == RX_SIZE-1) begin
-                        rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
-                        rx_valid <= 1'b1;
-                    end
-                end
-
-                READ_DATA: begin
-                    if(sp_counter == RX_SIZE-1) begin
-                        rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
-                        rx_valid <= 1'b1;
-                    end
-
-                    // MISO is connected to SO, shift en condition is assigned above, load condition in always block
-                end
-
-                default:; 
-            endcase
+            if (sipo_en) SIPO_register <= {SIPO_register[RX_SIZE-2:0], MOSI};
+            if(sp_counter == RX_SIZE-1) begin
+                rx_data <= {SIPO_register[RX_SIZE-2:0], MOSI};
+                rx_valid <= 1'b1;
+            end else rx_valid<=0;
         end
     end
-
-endmodule
-
-//shift-left SIPO register
-module SIPO #(
-    parameter DATA_WIDTH = 8
-) (
-    input clk,
-    input rst,
-    input SI,
-    input shift_en,
-    output [DATA_WIDTH-1:0] PO
-);
-
-endmodule
-
-// shift-left PISO register
-module PISO #(
-    parameter DATA_WIDTH = 8
-) (
-    input clk,
-    input rst,
-    input load,
-    input [DATA_WIDTH-1:0] PI,
-    input shift_en,
-    output reg SO
-);
-
-reg [DATA_WIDTH-1:0] register;
-
 
 endmodule
