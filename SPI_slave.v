@@ -161,7 +161,7 @@ assign piso_en = ~SS_n && (cs == READ_DATA) && piso_loaded && (ps_counter < TX_S
         end else begin
             rx_valid <= 0;
             case (cs)
-                IDLE begin
+                IDLE: begin
                     SIPO_register <= 0;
                 end
             //try valid at sp_counter == RX_SIZE and check in waveform
