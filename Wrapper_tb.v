@@ -1,74 +1,136 @@
 `timescale 1ns / 1ps
 
 module SPI_Wrapper_tb();
-reg clk ,rst ,MOSI ,SS_n;
-wire MISO;
-reg [7:0] received_miso_data;
-integer i;
 
-SPI_Wrapper SPI_Wrapper_tb (.clk(clk),.rst(rst),.MOSI(MOSI),.SS_n(SS_n),.MISO(MISO));
+    reg clk;
+    reg rst;
+    reg MOSI;
+    reg SS_n;
+    wire MISO;
 
-always #5 clk = ~clk;
+    integer i;
+    reg [9:0] payload;
+    reg [7:0] rx_data_out;
 
-task send_spi_frame(input [9:0] frame_data);
-integer k;
-begin
-SS_n = 0;
-#10;
+    // Instantiation of SPI_Wrapper
+    SPI_Wrapper uut (
+        .clk(clk),
+        .rst(rst),
+        .MOSI(MOSI),
+        .SS_n(SS_n),
+        .MISO(MISO)
+    );
 
-MOSI = frame_data[9];
-#10;
+    // Clock Generation (Period = 10ns)
+    always #5 clk = ~clk;
 
-for (k = 8; k >= 0; k = k - 1)
-MOSI = frame_data[k];
-#10;
-SS_n = 1;
-#30;
-end
-endtask;
-initial begin
-clk = 0;
-rst = 0;
-MOSI = 0;
-SS_n = 1;
-received_miso_data = 8'b0;
-#20;
-rst = 1;
-#20;
-$display("---- STEP 1: Writing Address 0x0A ----");
-send_spi_frame(10'b00_0000_1010);
+    initial begin
+        // 0. System Reset & Initialization
+        clk = 0;
+        rst = 0;
+        MOSI = 0;
+        SS_n = 1;
+        rx_data_out = 8'b0;
 
-$display("---- STEP 2: Writing Data 0x3C to Address 0x0A ----");
-send_spi_frame(10'b01_0011_1100);
+        #20;
+        rst = 1;
+        #10;
 
-$display("---- STEP 3: Setting Read Address to 0x0A ----");
-send_spi_frame(10'b10_0000_1010);
+        // 1. Write Address (Address: 0x05)
+        $display("--- 1. Writing Address (0x05) ---");
+        payload = 10'b00_0000_0101; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 0; // Control bit: Write
 
-$display("---- STEP 4: Reading Data from RAM on MISO ----");
-SS_n = 0;
-#10;
+        @(negedge clk);
 
-MOSI = 1; #10;
-MOSI = 1; #10;
-MOSI = 1; #10;
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
 
-for (i = 7; i >= 0; i = i - 1) begin
-MOSI = 0;
-#10;
-received_miso_data[i] = MISO;
-end
+        SS_n = 1;
+        MOSI = 0;
+        #30;
 
-SS_n = 1;
-#30;
+        // 2. Write Data (Data: 0xA5 at Address 0x05)
+        $display("--- 2. Writing Data (0xA5) ---");
+        payload = 10'b01_1010_0101; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 0; // Control bit: Write
 
-$display("==========================================");
-$display("WRAPPER TEST COMPLETE");
-$display("Transmitted Data Written : 0x3C");
-$display("Received Data from MISO  : 0x%h", received_miso_data);
-$display("==========================================");
+        @(negedge clk);
 
-#50;
-$stop;
-end
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        SS_n = 1;
+        MOSI = 0;
+        #30;
+
+        // 3. Read Address (Address: 0x05)
+        $display("--- 3. Setting Read Address (0x05) ---");
+        payload = 10'b10_0000_0101; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 1; // Control bit: Read
+
+        @(negedge clk);
+
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        SS_n = 1;
+        MOSI = 0;
+        #30;
+
+        // 4. Read Data Command & Sampling MISO
+        $display("--- 4. Requesting Read Data & Checking MISO ---");
+        payload = 10'b11_0000_0000; 
+        
+        @(negedge clk);
+        SS_n = 0;
+        MOSI = 1; // Control bit: Read
+
+        @(negedge clk);
+
+        for (i = 9; i >= 0; i = i - 1) begin
+            MOSI = payload[i];
+            @(negedge clk);
+        end
+
+        // Wait for RAM to fetch data and SPI PISO register to load
+        @(negedge clk);
+
+        // Read 8 bits shifted out on MISO line
+        $display("Reading MISO output stream:");
+        for (i = 7; i >= 0; i = i - 1) begin
+            rx_data_out[i] = MISO;
+            $display("MISO Bit[%0d] = %b", i, MISO);
+            @(negedge clk);
+        end
+
+        // Verification
+        if (rx_data_out === 8'hA5) begin
+            $display("[WRAPPER_TB PASS] Success! Data read from RAM matches: 0x%h", rx_data_out);
+        end else begin
+            $display("[WRAPPER_TB FAIL] Output mismatch! Expected: 0xA5, Got: 0x%h", rx_data_out);
+        end
+
+        SS_n = 1;
+        #50;
+
+        $display("Simulation Completed.");
+        $stop;
+    end
 
 endmodule
