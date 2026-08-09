@@ -66,7 +66,7 @@ module SPI_slave_tb();
         end
 
         // Check if data is received correctly
-        if (rx_valid && rx_data === payload) begin
+        if (rx_valid && rx_data == payload) begin
             $display("[SPI_TB PASS] WRITE Frame received correctly: 10'b%b", rx_data);
         end else begin
             $display("[SPI_TB FAIL] WRITE Frame Failed! Expected: 10'b%b, Got: 10'b%b", payload, rx_data);
@@ -95,7 +95,7 @@ module SPI_slave_tb();
         end
 
         // Check if data is received correctly
-        if (rx_valid && rx_data === payload) begin
+        if (rx_valid && rx_data == payload) begin
             $display("[SPI_TB PASS] READ_ADD Frame received correctly: 10'b%b", rx_data);
         end else begin
             $display("[SPI_TB FAIL] READ_ADD Frame Failed! Expected: 10'b%b, Got: 10'b%b", payload, rx_data);
@@ -125,7 +125,7 @@ module SPI_slave_tb();
             @(negedge clk);
         end
 
-        if (rx_valid && rx_data === payload) begin
+        if (rx_valid && rx_data == payload) begin
             $display("[SPI_TB PASS] READ_DATA Command received correctly.");
         end else begin
             $display("[SPI_TB FAIL] READ_DATA Command Failed!");
